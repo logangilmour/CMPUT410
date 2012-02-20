@@ -14,10 +14,16 @@ if(!defined ($pg)){ $pg=1;}
 #Persisted values
 my %store = ();
 
-persist();
-my $storeString = makeStore();
+my @p1_prods = ({"name"=>"beer","cost"=>5},{"name"=>"Ham","cost"=>5},{"name"=>"third","cost"=>88});
+my @p2_prods = ({"name"=>"Something","cost"=>5});
+products(@p1_prods,@p2_prods);
 
-
+my $content;
+if($pg==1){
+    $content=productPage(@p1_prods);
+}elsif($pg==2){
+    $content=productPage(@p2_prods);
+}
 my $page = <<HTML;
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
@@ -35,7 +41,6 @@ my $page = <<HTML;
 </head>
 
 <body id="tab$pg">
-$storeString
 
 <ul id="tabnav">
     <li class="tab1"><a href="#" onclick="submitPage(1)">Ironing</a></li>
@@ -46,19 +51,7 @@ $storeString
 
 <div id="pane">
 <div id="content">
-<h1>Vintage Stove</h1>
-
-<p>Our new Big Chill stove combines the iconic look of a 50's style retro range with all the modern amenities of a modern unit. Purchase through authorized dealers around the country or order directly through Big Chill.</p>
-<table>
-<tr>
-<td class="highlight">Vintage Stove</td>
-<td>MSRP \$4295</td>
-</tr>
-<tr>
-<td class="highlight">Matching Hood</td>
-<td>MSRP \$1395</td>
-</tr>
-</table>
+$content
 </div>
 </div>
 </body>
@@ -67,19 +60,53 @@ HTML
 #Print header and page
 print $q->header();
 print $page;
+
+#Routines for hidden-variable keystore
 sub persist {
 	foreach (@_){
-		$store{$_}=$params->{$_};
+		$store{$_."-store"}=$params->{$_."-store"};
 	}	
 }
+sub setStored{
+    $store{$_[0]."-store"}=$_[1];
+}
+sub retrieve {
+	return $store{$_[0]."-store"};
+}
+#Should be called just before rendering page so that all saved entries are included
 sub makeStore {
-	my $ret = "<form method='POST' name='store'><input id='pageField' type='hidden' name='page' value='1'>";
-	foreach(keys %store){
+    my $ret;	
+    foreach(keys %store){
 		$ret.= "<input type='hidden' name='$_' value='$store{$_}'>";
 	}
-	return "$ret </form>";
+	return $ret;
 }
-sub product{
-	$name=$_[0];
-	return "<input type='text' name='pName'>$store{$name+'_qty'}</input>"
+
+sub products{
+    foreach (@_){
+        my $name=$_->{'name'};
+        persist($name);
+		my $newQty=$params->{$name};
+        if(defined($newQty) && $newQty!=""){setStored($name,$newQty);}
+    }
+}
+#Routines for rendering forms
+sub makeProducts{
+    my $ret="<tr><th colspan='2'>Item</th><th>Price</th><th>Y/N</th><th>Quantity</th></tr>\n";
+	foreach (@_){
+		my $name=$_->{'name'};
+		my $cost=$_->{'cost'};
+        my $image=$_->{'image'};
+		my $qty=retrieve($name);
+	    $ret.= "<tr><td><img src='$image' alt='image of $name'></td><td>$name</td><td>$cost</td><td><input type='checkbox'></td><td><input type='text' name='$name' value='$qty'></td></tr>\n";
+	}
+    return $ret;
+}
+#Page builders
+sub form{ 
+    return "<form method='POST' name='store'><input id='pageField' type='hidden' name='page' value='1'>\n<table>\n".$_[0]."\n</table>\n</form>\n";
+}
+sub productPage{
+    return form(makeProducts(@_).makeStore());
+}
 1;
