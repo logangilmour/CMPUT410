@@ -18,11 +18,14 @@ my @p1_prods = ({"name"=>"beer","cost"=>5},{"name"=>"Ham","cost"=>5},{"name"=>"t
 my @p2_prods = ({"name"=>"Something","cost"=>5});
 products(@p1_prods,@p2_prods);
 
+my $validations;
 my $content;
 if($pg==1){
     $content=productPage(@p1_prods);
+    $validations=productValidations(@p1_prods);
 }elsif($pg==2){
     $content=productPage(@p2_prods);
+    $validations=productValidations(@p2_prods);
 }
 my $page = <<HTML;
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
@@ -36,6 +39,21 @@ my $page = <<HTML;
         function submitPage(num){
             document.getElementById('pageField').value=num;
             document.store.submit();
+        }
+        function validate(){
+            $validations 
+        }
+        function checkProduct(name){
+            alert(name);
+            var text = document.getElementById('text-'+name);
+            var check = document.getElementById('check-'+name);
+            if(text.value.match(/^\\d+\$/)){
+                text.value="";
+                alert('Product quantities must be numbers.');
+            }
+            if(text.value>0){
+                check.checked=true;
+            }
         }
     </script>
 </head>
@@ -98,8 +116,15 @@ sub makeProducts{
 		my $cost=$_->{'cost'};
         my $image=$_->{'image'};
 		my $qty=retrieve($name);
-	    $ret.= "<tr><td><img src='$image' alt='image of $name'></td><td>$name</td><td>$cost</td><td><input type='checkbox'></td><td><input type='text' name='$name' value='$qty'></td></tr>\n";
+	    $ret.= "<tr><td><img src='$image' alt='image of $name'></td><td>$name</td><td>$cost</td><td><input type='checkbox' onchange='validate()' id='check-$name'></td><td><input type='text' name='$name' value='$qty' onchange='validate()' id='text-$name'></td></tr>\n";
 	}
+    return $ret;
+}
+sub productValidations{
+    my $ret;
+    foreach (@_){
+        $ret.="checkProduct('$_->{'name'}');\n";
+    }
     return $ret;
 }
 #Page builders
