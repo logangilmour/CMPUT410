@@ -47,7 +47,7 @@ my $page = <<HTML;
             alert(name);
             var text = document.getElementById('text-'+name);
             var check = document.getElementById('check-'+name);
-            if(text.value.match(/^\\d+\$/)){
+            if(!text.value.match(/^\\d*\$/)){
                 text.value="";
                 alert('Product quantities must be numbers.');
             }
