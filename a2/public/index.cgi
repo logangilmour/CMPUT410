@@ -40,20 +40,35 @@ my $page = <<HTML;
             document.getElementById('pageField').value=num;
             document.store.submit();
         }
+        function isNumber(str){
+            return str.match(/^\\d*\$/);
+        }
         function validate(){
+            alert('got here');
             $validations 
         }
         function checkProduct(name){
-            alert(name);
             var text = document.getElementById('text-'+name);
             var check = document.getElementById('check-'+name);
-            if(!text.value.match(/^\\d*\$/)){
+            if(!isNumber(text.value)){
                 text.value="";
                 alert('Product quantities must be numbers.');
             }
-            if(text.value>0){
-                check.checked=true;
+            alert('got here with '+text.value);            
+            if(text.value==""){
+
+                check.checked=false;
             }
+        }
+        function checkbox(name){
+            var text = document.getElementById('text-'+name);
+            var check =  document.getElementById('check-'+name);
+           alert('got in check with '+check.checked);
+            if(check.checked==true && !isNumber(text.value) || text.value<1){
+                alert('val check');
+                text.value=1;
+            }
+
         }
     </script>
 </head>
@@ -116,7 +131,11 @@ sub makeProducts{
 		my $cost=$_->{'cost'};
         my $image=$_->{'image'};
 		my $qty=retrieve($name);
-	    $ret.= "<tr><td><img src='$image' alt='image of $name'></td><td>$name</td><td>$cost</td><td><input type='checkbox' onchange='validate()' id='check-$name'></td><td><input type='text' name='$name' value='$qty' onchange='validate()' id='text-$name'></td></tr>\n";
+        my $checked = "";
+        if ($qty!="" && $qty>0){
+            $checked=" checked='true'";
+        }
+	    $ret.= "<tr><td><img src='$image' alt='image of $name'></td><td>$name</td><td>$cost</td><td><input type='checkbox' onchange='checkbox(\"$name\")' id='check-$name'$checked></td><td><input type='text' name='$name' value='$qty' onchange='validate()' id='text-$name'></td></tr>\n";
 	}
     return $ret;
 }
@@ -132,6 +151,13 @@ sub form{
     return "<form method='POST' name='store'><input id='pageField' type='hidden' name='page' value='1'>\n<table>\n".$_[0]."\n</table>\n</form>\n";
 }
 sub productPage{
-    return form(makeProducts(@_).makeStore());
+    my $all = "[";
+    for (@_){
+        $all.="\"check-$_->{'name'}\",";
+    }
+    chop($all);
+    $all="all($all]);";
+        
+    return form(makeProducts(@_).makeStore())."<img src='cart.jpg' alt = 'add all to cart' style='cursor: pointer' onclick='$all'>";
 }
 1;
