@@ -40,35 +40,44 @@ my $page = <<HTML;
             document.getElementById('pageField').value=num;
             document.store.submit();
         }
+        function getCheckBox(name){
+            return document.getElementById('check-'+name);
+        }
+        function getTextBox(name){
+            return document.getElementById('text-'+name);
+        }
         function isNumber(str){
             return str.match(/^\\d*\$/);
         }
+        function all(list){
+            for(var i=0;i<list.length;i++){
+                var box = getCheckBox(list[i]);
+                var text = getTextBox(list[i]);
+                if(text.value.match(/^\\s*\$/)){
+                    text.value=1;
+                    box.checked=true;
+                }
+            }
+        }
         function validate(){
-            alert('got here');
             $validations 
         }
         function checkProduct(name){
-            var text = document.getElementById('text-'+name);
-            var check = document.getElementById('check-'+name);
+            var text = getTextBox(name); 
+            var check = getCheckBox(name); 
             if(!isNumber(text.value)){
                 text.value="";
-                alert('Product quantities must be numbers.');
             }
-            alert('got here with '+text.value);            
             if(text.value==""){
-
                 check.checked=false;
             }
         }
         function checkbox(name){
             var text = document.getElementById('text-'+name);
             var check =  document.getElementById('check-'+name);
-           alert('got in check with '+check.checked);
             if(check.checked==true && !isNumber(text.value) || text.value<1){
-                alert('val check');
                 text.value=1;
             }
-
         }
     </script>
 </head>
@@ -124,6 +133,8 @@ sub products{
     }
 }
 #Routines for rendering forms
+        
+
 sub makeProducts{
     my $ret="<tr><th colspan='2'>Item</th><th>Price</th><th>Y/N</th><th>Quantity</th></tr>\n";
 	foreach (@_){
@@ -151,12 +162,12 @@ sub form{
     return "<form method='POST' name='store'><input id='pageField' type='hidden' name='page' value='1'>\n<table>\n".$_[0]."\n</table>\n</form>\n";
 }
 sub productPage{
-    my $all = "[";
+    my $all = " new Array(";
     for (@_){
-        $all.="\"check-$_->{'name'}\",";
+        $all.="\"$_->{'name'}\",";
     }
     chop($all);
-    $all="all($all]);";
+    $all="all($all));";
         
     return form(makeProducts(@_).makeStore())."<img src='cart.jpg' alt = 'add all to cart' style='cursor: pointer' onclick='$all'>";
 }
