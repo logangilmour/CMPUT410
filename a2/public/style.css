@@ -105,3 +105,6 @@ ul.feature-list{
 span.wrapper{
     color:#333;
 }
+#error-message{
+    color:#ff0000;
+}

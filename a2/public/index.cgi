@@ -14,25 +14,36 @@ if(!defined ($pg)){ $pg=1;}
 #Persisted values
 my %store = ();
 
+
+my @mandatory = ("Name","Street Address","City","Province","Postal Code");
 my @p1_prods = ({"name"=>"beer","cost"=>5},{"name"=>"Ham","cost"=>5},{"name"=>"third","cost"=>88});
 my @p2_prods = ({"name"=>"Something","cost"=>5});
 products(@p1_prods,@p2_prods);
-
+userInfo(@mandatory);
 my $validations;
 my $content;
-if($pg==1){
+my $title;
+my $error=checkMandatory(@mandatory);
+if(defined($error)){
+    $title="Customer Identification";
+    $content=userPage(@mandatory);
+    $validations="";
+}elsif($pg==1){
+    $title="Ironing";
     $content=productPage(@p1_prods);
     $validations=productValidations(@p1_prods);
 }elsif($pg==2){
+    $title="Vaccuuming";
     $content=productPage(@p2_prods);
     $validations=productValidations(@p2_prods);
 }
+
 my $page = <<HTML;
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 <head>
-    <title>Assignment 1</title>
+    <title>Assignment 1 - $title</title>
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
     <LINK REL=StyleSheet HREF="style.css" TYPE="text/css" MEDIA=screen>
     <script type="text/javascript">
@@ -93,6 +104,8 @@ my $page = <<HTML;
 
 <div id="pane">
 <div id="content">
+<h1>$title</h1>
+<div id="error-message">$error</div>
 $content
 </div>
 </div>
@@ -133,7 +146,30 @@ sub products{
     }
 }
 #Routines for rendering forms
-        
+sub userInfo{
+    foreach(@_){
+        persist($_);
+    }
+}
+
+sub makeUserText{
+    my $ret = "";
+    foreach(@_){
+        my $val = retrieve($_);
+        $ret.="<tr><td><label for='$_'>$_</label></td><td><input type='text' name='$_' id='$_' value='$val'></td></tr>";
+    }
+    return $ret;
+}
+
+sub checkMandatory{
+    foreach(@_){
+	my $val = retrieve($_);
+        if(not defined($val) or $val=~/^\s*$/){
+            return "The $_ field must be filled.";
+        }
+    }
+    return undef;
+}
 
 sub makeProducts{
     my $ret="<tr><th colspan='2'>Item</th><th>Price</th><th>Y/N</th><th>Quantity</th></tr>\n";
@@ -170,5 +206,8 @@ sub productPage{
     $all="all($all));";
         
     return form(makeProducts(@_).makeStore())."<img src='cart.jpg' alt = 'add all to cart' style='cursor: pointer' onclick='$all'>";
+}
+sub userPage{
+    return form(makeUserText(@_).makeStore());
 }
 1;
