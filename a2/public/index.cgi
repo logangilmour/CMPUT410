@@ -4,23 +4,24 @@ use CGI;
 use HTML::Entities;
 use strict;
 use warnings;
-
 my $q = CGI->new;
 my $params = $q->Vars;
 
 #Figure out which page we're on
 my $pg = $params->{'page'};
-if(!defined ($pg)){ $pg=1;}
 
 #Persisted values
 my %store = ();
 
-
-my @mandatory = ("Name","Street Address","City","Province","Postal Code");
-my @p1_prods = ({"name"=>"beer","cost"=>5},{"name"=>"Ham","cost"=>5},{"name"=>"third","cost"=>88});
-my @p2_prods = ({"name"=>"Something","cost"=>5});
-products(@p1_prods,@p2_prods);
-userInfo(@mandatory);
+my ($nameF,$streetF,$cityF,$provinceF,$postF,$emailF,$birthF) = 
+    ("Name","Street Address","City","Province","Postal Code","Email Address","Birth Date");
+my @allFields = ($nameF,$streetF,$cityF,$provinceF,$postF,$emailF,$birthF);
+my @mandatory = ($nameF,$streetF,$cityF,$provinceF,$postF);
+my @p1_prods = ({"name"=>"Extreme Iron","cost"=>100},{"name"=>"Kevlar Ironing-Board","cost"=>140},{"name"=>"Space-Time Iron","cost"=>88});
+my @p2_prods = ({"name"=>"Light Vacuum","cost"=>1000},{"name"=>"Extraction Nozzle","cost"=>25},{"name"=>"Nuclear Vacuum-bag","cost"=>45});
+my @p3_prods = ({"name"=>"Laser Pot","cost"=>180},{"name"=>"Spatula of The Abyss","cost"=>42},{"name"=>"Fork.","cost"=>10000},{"name"=>"Spoon.","cost"=>10000});
+products(@p1_prods,@p2_prods,@p3_prods);
+userInfo(@allFields);
 my $validations;
 my $content;
 my $title;
@@ -34,9 +35,13 @@ my $tabs = <<TABS;
 TABS
 
 my $error=checkMandatory(@mandatory);
-if(defined($error)){
+if(!defined($pg) or defined($error)){
+    if(!defined($pg)){
+        $error="Fields marked with an asterisk are mandatory.";
+        $pg=1;
+    }
     $title="Customer Identification";
-    $content=userPage(@mandatory);
+    $content=userPage();
     $validations="";
     $tabs="";
 }elsif($pg==1){
@@ -44,11 +49,20 @@ if(defined($error)){
     $content=productPage(@p1_prods);
     $validations=productValidations(@p1_prods);
 }elsif($pg==2){
-    $title="Vaccuuming";
+    $title="Vacuuming";
     $content=productPage(@p2_prods);
     $validations=productValidations(@p2_prods);
+}elsif($pg==3){
+    $title="Cooking";
+    $content=productPage(@p3_prods);
+    $validations=productValidations(@p3_prods);
+}elsif($pg==4){
+    $title="Checkout";
+    $content=checkoutPage();
+    $validations="";
 }
-
+my $safeEmail=safe($emailF);
+my $safePost = safe($postF);
 my $page = <<HTML;
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
@@ -58,8 +72,19 @@ my $page = <<HTML;
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
     <LINK REL=StyleSheet HREF="style.css" TYPE="text/css" MEDIA=screen>
     <script type="text/javascript">
-        function wangs(){
-            alert('indeed!');
+        function checkEmail(){
+            var text = document.getElementById('$safeEmail');
+            if(!text.value.match(/^[\\w\\.-]+@([\\w\\-]+\\.)+[A-z]{2,4}\$/)){
+                alert(text.value+" is not a valid email.");
+                text.value="";
+            }
+        }
+        function checkPost(){
+            var text = document.getElementById('$safePost');
+            if(!text.value.match(/^[A-z]\\d[A-z]\\s*-?\\s*\\d[A-z]\\d\$/)){
+                alert(text.value+" is not a valid postal code.");
+                text.value="";
+            }
         }
         function submitPage(num){
             document.getElementById('pageField').value=num;
@@ -75,9 +100,7 @@ my $page = <<HTML;
             return str.match(/^\\d*\$/);
         }
         function allCheck(list){
-            alert('woo');
             for(var i=0;i<list.length;i++){
-                alert(list[i]);
                 var box = getCheckBox(list[i]);
                 var text = getTextBox(list[i]);
                 if(text.value.match(/^\\s*\$/)){
@@ -94,9 +117,13 @@ my $page = <<HTML;
             var check = getCheckBox(name); 
             if(!isNumber(text.value)){
                 text.value="";
+                alert("Quantities must be whole numbers.");
             }
-            if(text.value==""){
+            if(text.value=="" || text.value==0){
                 check.checked=false;
+                text.value="";
+            }if(text.value!="" && isNumber(text.value)&& text.value>0){
+                check.checked=true;
             }
         }
         function checkbox(name){
@@ -153,8 +180,8 @@ sub products{
     foreach (@_){
         my $name=$_->{'name'};
         persist($name);
-        my $newQty=$params->{$name};
-        if(defined($newQty) && $newQty!=""){setStored($name,$newQty);}
+        my $newQty=$params->{safe($name)};
+        if(defined($newQty)){setStored($name,$newQty);}
     }
 }
 #Routines for rendering forms
@@ -166,15 +193,34 @@ sub userInfo{
     }
 }
 
-sub makeUserText{
-    my $ret = "";
-    foreach(@_){
-        my $val = retrieve($_);
-        $ret.="<tr><td><label for='".safe($_)."'>$_</label></td><td><input type='text' name='".safe($_)."' id='".safe($_)."' value='".encode_entities($val)."'></td></tr>";
-    }
-    return $ret;
-}
+sub makeU{
+    my $name = shift @_;
+    my $val = retrieve($name);
+    my $change = "";
+    if(@_){$change=" onchange='".(shift @_)."'";}
 
+    my $mand = "";
+    foreach(@mandatory){
+        if($name eq $_){
+            $mand="<td><span style='color:red'>*</span></td>";
+        }
+    }
+    return "<tr><td><label for='".safe($name)."'>$name</label></td><td><input type='text' name='".safe($name)."' id='".safe($name)."' value='".encode_entities($val)."'$change></td>$mand</tr>\n";
+}
+sub makeUserSelect{
+    my $name = shift @_;
+    my $opts = "<option value=''>Choose $name</option>\n";
+    my $val = retrieve($name);
+    foreach (@_){
+        my $checked = ""; 
+        if($val eq $_){
+            $checked=" selected='selected'";
+        }
+        $opts.="<option value='".safe($_)."'$checked>$_</option>\n";
+    }
+
+    return "<tr><td><label for='".safe($name)."'>$name</label></td><td><select name='".safe($name)."' id='".safe($name)."'>$opts</select></td><td><span style='color:red'>*</span></td></tr>\n";
+}
 sub checkMandatory{
     foreach(@_){
 	my $val = retrieve($_);
@@ -186,18 +232,18 @@ sub checkMandatory{
 }
 
 sub makeProducts{
-    my $ret="<tr><th colspan='2'>Item</th><th>Price</th><th>Y/N</th><th>Quantity</th></tr>\n";
-	foreach (@_){
-		my $name=$_->{'name'};
-		my $cost=$_->{'cost'};
+    my $ret="<tr><th>Item</th><th>Price</th><th>Y/N</th><th>Quantity</th></tr>\n";
+    foreach (@_){
+        my $name=$_->{'name'};
+        my $cost=$_->{'cost'};
         my $image=$_->{'image'};
-		my $qty=retrieve($name);
+        my $qty=retrieve($name);
         my $checked = "";
         if ($qty!="" && $qty>0){
             $checked=" checked='true'";
         }
-	    $ret.= "<tr><td><img src='$image' alt='image of $name'></td><td>$name</td><td>\$$cost</td><td><input type='checkbox' onchange='checkbox(\"".safe($name)."\")' id='check-".safe($name)."'$checked></td><td><input type='text' name='".safe($name)."' value='".encode_entities($qty)."' onchange='validate()' id='text-".safe($name)."'></td></tr>\n";
-	}
+        $ret.= "<tr><td>$name</td><td>\$$cost</td><td><input type='checkbox' onchange='checkbox(\"".safe($name)."\")' id='check-".safe($name)."'$checked></td><td><input type='text' name='".safe($name)."' value='".encode_entities($qty)."' onchange='validate()' id='text-".safe($name)."'></td></tr>\n";
+    }
     return $ret;
 }
 sub productValidations{
@@ -214,20 +260,51 @@ sub form{
 sub productPage{
     my $all = "[";
     for (@_){
-        $all.="\"$_->{'name'}\",";
+        $all.=('"'.safe($_->{'name'}).'",');
     }
     chop($all);
     $all="allCheck($all])";
-        
+
     return form(makeProducts(@_).makeStore())."<img src='cart.jpg' alt = 'add all to cart' style='cursor: pointer' onclick='$all'>";
 }
 sub userPage{
-    return form(makeUserText(@_).makeStore()."<tr><td colspan='2'><input type='button' value='Submit' onclick='submitPage(1)'></td></tr>");
+    return form(makeU($nameF).makeU($streetF).makeU($cityF).makeUserSelect($provinceF,"Alberta","British Columbia","Manitoba","New Brunswick","Newfoundland and Labrador","Nova Scotia","Ontario","Prince Edward Island","Quebec","Saskatchewan","Northwest Territories","Nunavut","Yukon").makeU($postF,"checkPost()").makeU($emailF,"checkEmail()").makeU($birthF).makeStore()."<tr><td colspan='2'><input type='button' value='Submit' onclick='submitPage(1)'></td></tr>");
+}
+sub checkoutPage{
+    my $ci = "<tr><th>Invoice To:</th></tr>\n";
+    $ci.="<tr><td>".retrieve($nameF)."</td></tr>";
+    $ci.="<tr><td>".retrieve($streetF)."</td></tr>";
+    $ci.="<tr><td>".retrieve($cityF).", ".retrieve($provinceF)."&nbsp;&nbsp;".retrieve($postF)."</td></tr>";
+    my $email = retrieve($emailF);
+    my $birth = retrieve($birthF);
+    if(!($email=~/^\s*$/)){
+        $ci.="<tr><td>$email</td></tr>";
+    }
+    if(!($birth=~/^\s*$/)){
+        $ci.="<tr><td>Birthdate: $birth</td></tr>";
+    }
+
+    my $lines = "<tr><th>Item</th><th>Cost</th><th>Qty</th><th>Line Cost</th></tr>\n";
+    my $total=0;
+    
+    foreach((@p1_prods,@p2_prods,@p3_prods)){
+        my $name = $_->{'name'};
+        my $cost = $_->{'cost'};
+        my $qty = retrieve($name);
+        if($qty>0){ 
+            my $lcost=$qty*$cost;
+            if($qty =~/^\s*$/){$qty=0}
+            $lines.="<tr><td>$name</td><td>\$$cost</td><td>$qty</td><td>\$$lcost</td></tr>\n";
+            $total+=$lcost;
+        }
+    }
+    $lines.="<tr><td colspan='3'><b>Total</b></td><td>\$$total</td></tr>";
+    return form("$ci</table><table id='invoice'>$lines".makeStore());
 }
 sub safe{
     my $str = shift @_;
-    lc $str;
-    $str =~ s/\s//g;
+    $str= lc $str;
+    $str =~ s/\s+/-/g;
     return $str;
 }
 1;

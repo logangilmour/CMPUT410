@@ -60,6 +60,10 @@ table,th, td
 {
 border: 2px solid #fff;
 }
+table#invoice td, table#invoice th{
+    padding:5px;
+    border-color:#555;
+}
 td{
     padding:0.5em;
 }
