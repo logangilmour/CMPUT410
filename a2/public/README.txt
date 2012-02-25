@@ -1,6 +1,8 @@
 Assignment 2 - CMPUT 410 Winter 2012
 Logan Gilmour
 
+My Application is running at http://ikno.ws
+
 Given the technology constraints, I decided to implement this application as one big perl CGI. Since the user never gets a permanent username or other permanent identification token assigned to him/her, I elected to store all application state on the client in a custom-built key-value store. 
 
 I built the key-value store on top of hidden form elements, as cookies were not allowed in this assignment.
