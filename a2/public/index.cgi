@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use CGI::Carp qw(fatalsToBrowser);
 use CGI;
+use HTML::Entities;
 use strict;
 use warnings;
 
@@ -23,11 +24,21 @@ userInfo(@mandatory);
 my $validations;
 my $content;
 my $title;
+my $tabs = <<TABS; 
+<ul id="tabnav">
+<li class="tab1"><a href="#" onclick="submitPage(1)">Ironing</a></li>
+<li class="tab2"><a href="#" onclick="submitPage(2)">Vacuuming</a></li>
+<li class="tab3"><a href="#" onclick="submitPage(3)">Cooking</a></li>
+<li class="tab4"><a href="#" onclick="submitPage(4)">Checkout</a></li>
+</ul>
+TABS
+
 my $error=checkMandatory(@mandatory);
 if(defined($error)){
     $title="Customer Identification";
     $content=userPage(@mandatory);
     $validations="";
+    $tabs="";
 }elsif($pg==1){
     $title="Ironing";
     $content=productPage(@p1_prods);
@@ -47,6 +58,9 @@ my $page = <<HTML;
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
     <LINK REL=StyleSheet HREF="style.css" TYPE="text/css" MEDIA=screen>
     <script type="text/javascript">
+        function wangs(){
+            alert('indeed!');
+        }
         function submitPage(num){
             document.getElementById('pageField').value=num;
             document.store.submit();
@@ -60,8 +74,10 @@ my $page = <<HTML;
         function isNumber(str){
             return str.match(/^\\d*\$/);
         }
-        function all(list){
+        function allCheck(list){
+            alert('woo');
             for(var i=0;i<list.length;i++){
+                alert(list[i]);
                 var box = getCheckBox(list[i]);
                 var text = getTextBox(list[i]);
                 if(text.value.match(/^\\s*\$/)){
@@ -89,19 +105,15 @@ my $page = <<HTML;
             if(check.checked==true && !isNumber(text.value) || text.value<1){
                 text.value=1;
             }
+            if(check.checked==false){
+                text.value="";
+            }
         }
     </script>
 </head>
 
 <body id="tab$pg">
-
-<ul id="tabnav">
-    <li class="tab1"><a href="#" onclick="submitPage(1)">Ironing</a></li>
-    <li class="tab2"><a href="#" onclick="submitPage(2)">Vacuuming</a></li>
-<li class="tab3"><a href="#" onclick="submitPage(3)">Cooking</a></li>
-<li class="tab4"><a href="#" onclick="submitPage(4)">Checkout</a></li>
-</ul>
-
+$tabs
 <div id="pane">
 <div id="content">
 <h1>$title</h1>
@@ -118,30 +130,30 @@ print $page;
 
 #Routines for hidden-variable keystore
 sub persist {
-	foreach (@_){
-		$store{$_."-store"}=$params->{$_."-store"};
-	}	
+    foreach (@_){
+        $store{$_."-store"}=$params->{safe($_)."-store"};
+    }	
 }
 sub setStored{
     $store{$_[0]."-store"}=$_[1];
 }
 sub retrieve {
-	return $store{$_[0]."-store"};
+    return $store{$_[0]."-store"};
 }
 #Should be called just before rendering page so that all saved entries are included
 sub makeStore {
     my $ret;	
     foreach(keys %store){
-		$ret.= "<input type='hidden' name='$_' value='$store{$_}'>";
-	}
-	return $ret;
+        $ret.= "<input type='hidden' name='".safe($_)."' value='".encode_entities($store{$_})."'>";
+    }
+    return $ret;
 }
 
 sub products{
     foreach (@_){
         my $name=$_->{'name'};
         persist($name);
-		my $newQty=$params->{$name};
+        my $newQty=$params->{$name};
         if(defined($newQty) && $newQty!=""){setStored($name,$newQty);}
     }
 }
@@ -149,6 +161,8 @@ sub products{
 sub userInfo{
     foreach(@_){
         persist($_);
+        my $in = $params->{safe($_)};
+        if(defined($in)){setStored($_,$in);}
     }
 }
 
@@ -156,7 +170,7 @@ sub makeUserText{
     my $ret = "";
     foreach(@_){
         my $val = retrieve($_);
-        $ret.="<tr><td><label for='$_'>$_</label></td><td><input type='text' name='$_' id='$_' value='$val'></td></tr>";
+        $ret.="<tr><td><label for='".safe($_)."'>$_</label></td><td><input type='text' name='".safe($_)."' id='".safe($_)."' value='".encode_entities($val)."'></td></tr>";
     }
     return $ret;
 }
@@ -182,14 +196,14 @@ sub makeProducts{
         if ($qty!="" && $qty>0){
             $checked=" checked='true'";
         }
-	    $ret.= "<tr><td><img src='$image' alt='image of $name'></td><td>$name</td><td>$cost</td><td><input type='checkbox' onchange='checkbox(\"$name\")' id='check-$name'$checked></td><td><input type='text' name='$name' value='$qty' onchange='validate()' id='text-$name'></td></tr>\n";
+	    $ret.= "<tr><td><img src='$image' alt='image of $name'></td><td>$name</td><td>\$$cost</td><td><input type='checkbox' onchange='checkbox(\"".safe($name)."\")' id='check-".safe($name)."'$checked></td><td><input type='text' name='".safe($name)."' value='".encode_entities($qty)."' onchange='validate()' id='text-".safe($name)."'></td></tr>\n";
 	}
     return $ret;
 }
 sub productValidations{
     my $ret;
     foreach (@_){
-        $ret.="checkProduct('$_->{'name'}');\n";
+        $ret.="checkProduct('".safe($_->{'name'})."');\n";
     }
     return $ret;
 }
@@ -198,16 +212,22 @@ sub form{
     return "<form method='POST' name='store'><input id='pageField' type='hidden' name='page' value='1'>\n<table>\n".$_[0]."\n</table>\n</form>\n";
 }
 sub productPage{
-    my $all = " new Array(";
+    my $all = "[";
     for (@_){
         $all.="\"$_->{'name'}\",";
     }
     chop($all);
-    $all="all($all));";
+    $all="allCheck($all])";
         
     return form(makeProducts(@_).makeStore())."<img src='cart.jpg' alt = 'add all to cart' style='cursor: pointer' onclick='$all'>";
 }
 sub userPage{
-    return form(makeUserText(@_).makeStore());
+    return form(makeUserText(@_).makeStore()."<tr><td colspan='2'><input type='button' value='Submit' onclick='submitPage(1)'></td></tr>");
+}
+sub safe{
+    my $str = shift @_;
+    lc $str;
+    $str =~ s/\s//g;
+    return $str;
 }
 1;
