@@ -9,9 +9,10 @@ my $params = $q->Vars;
 
 #Figure out which page we're on
 my $pg = $params->{'page'};
-
+my $validT = $params->{'valid'};
 #Persisted values
 my %store = ();
+my @newCookies = ();
 
 my ($nameF,$streetF,$cityF,$provinceF,$postF,$emailF,$birthF) = 
     ("Name","Street Address","City","Province","Postal Code","Email Address","Birth Date");
@@ -19,9 +20,10 @@ my @allFields = ($nameF,$streetF,$cityF,$provinceF,$postF,$emailF,$birthF);
 my @mandatory = ($nameF,$streetF,$cityF,$provinceF,$postF);
 my @p1_prods = ({"name"=>"Extreme Iron","cost"=>100},{"name"=>"Kevlar Ironing-Board","cost"=>140},{"name"=>"Space-Time Iron","cost"=>88});
 my @p2_prods = ({"name"=>"Light Vacuum","cost"=>1000},{"name"=>"Extraction Nozzle","cost"=>25},{"name"=>"Nuclear Vacuum-bag","cost"=>45});
-my @p3_prods = ({"name"=>"Laser Pot","cost"=>180},{"name"=>"Spatula of The Abyss","cost"=>42},{"name"=>"Fork.","cost"=>10000},{"name"=>"Spoon.","cost"=>10000});
+my @p3_prods = ({"name"=>"Laser Pot","cost"=>180},{"name"=>"Spatula of The Abyss","cost"=>42},{"name"=>"Fork","cost"=>10000},{"name"=>"Spoon","cost"=>10000});
 products(@p1_prods,@p2_prods,@p3_prods);
 userInfo(@allFields);
+my $redirect = undef;
 my $validations;
 my $content;
 my $title;
@@ -35,6 +37,12 @@ my $tabs = <<TABS;
 TABS
 
 my $error=checkMandatory(@mandatory);
+if (!defined($error) && defined(retrieve($emailF)) && !(retrieve($emailF)=~/^\s*$/) && !(retrieve($emailF)=~/^[\w\.-]+@([\w\-]+\.)+[A-z]{2,4}$/)){
+    $error = "Invalid email.";
+}
+if (!defined($error) && !(retrieve($postF)=~/^[A-z]\d[A-z]\s*-?\s*\d[A-z]\d$/)){
+    $error = "Invalid postal code.";
+}
 if(!defined($pg) or defined($error)){
     if(!defined($pg)){
         $error="Fields marked with an asterisk are mandatory.";
@@ -45,21 +53,22 @@ if(!defined($pg) or defined($error)){
     $validations="";
     $tabs="";
 }elsif($pg==1){
+    $error="";
     $title="Ironing";
     $content=productPage(@p1_prods);
     $validations=productValidations(@p1_prods);
 }elsif($pg==2){
+    $error="";
     $title="Vacuuming";
     $content=productPage(@p2_prods);
     $validations=productValidations(@p2_prods);
 }elsif($pg==3){
+    $error="";
     $title="Cooking";
     $content=productPage(@p3_prods);
     $validations=productValidations(@p3_prods);
 }elsif($pg==4){
-    $title="Checkout";
-    $content=checkoutPage();
-    $validations="";
+    $redirect="/invoice.php";
 }
 my $safeEmail=safe($emailF);
 my $safePost = safe($postF);
@@ -72,6 +81,7 @@ my $page = <<HTML;
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
     <LINK REL=StyleSheet HREF="style.css" TYPE="text/css" MEDIA=screen>
     <script type="text/javascript">
+        var changes = false;
         function checkEmail(){
             var text = document.getElementById('$safeEmail');
             if(!text.value.match(/^[\\w\\.-]+@([\\w\\-]+\\.)+[A-z]{2,4}\$/)){
@@ -88,6 +98,10 @@ my $page = <<HTML;
         }
         function submitPage(num){
             document.getElementById('pageField').value=num;
+            if(changes){
+                document.getElementById('validField').value=confirm("Are you sure you want to make these changes to your cart?")?1:0;
+            }
+            
             document.store.submit();
         }
         function getCheckBox(name){
@@ -106,6 +120,7 @@ my $page = <<HTML;
                 if(text.value.match(/^\\s*\$/)){
                     text.value=1;
                     box.checked=true;
+                    changes = true;
                 }
             }
         }
@@ -113,6 +128,7 @@ my $page = <<HTML;
             $validations 
         }
         function checkProduct(name){
+            changes=true;
             var text = getTextBox(name); 
             var check = getCheckBox(name); 
             if(!isNumber(text.value)){
@@ -127,6 +143,7 @@ my $page = <<HTML;
             }
         }
         function checkbox(name){
+            changes=true;
             var text = document.getElementById('text-'+name);
             var check =  document.getElementById('check-'+name);
             if(check.checked==true && !isNumber(text.value) || text.value<1){
@@ -136,6 +153,7 @@ my $page = <<HTML;
                 text.value="";
             }
         }
+            
     </script>
 </head>
 
@@ -152,28 +170,29 @@ $content
 </html>
 HTML
 #Print header and page
-print $q->header();
+if(defined $redirect){
+print $q->redirect('-uri'=>$q->url(-base=>1).$redirect,'-cookie'=> \@newCookies);
+}else{
+print $q->header('-cookie'=> \@newCookies);
 print $page;
+}
 
 #Routines for hidden-variable keystore
+
 sub persist {
     foreach (@_){
-        $store{$_."-store"}=$params->{safe($_)."-store"};
+        $store{safe($_)}=$q->cookie(safe($_));
     }	
 }
 sub setStored{
-    $store{$_[0]."-store"}=$_[1];
-}
-sub retrieve {
-    return $store{$_[0]."-store"};
-}
-#Should be called just before rendering page so that all saved entries are included
-sub makeStore {
-    my $ret;	
-    foreach(keys %store){
-        $ret.= "<input type='hidden' name='".safe($_)."' value='".encode_entities($store{$_})."'>";
+    if($validT){
+        push @newCookies, $q->cookie('-name'=>safe($_[0]),'-value'=>"$_[1]");
+        $store{safe($_[0])}=$_[1];
     }
-    return $ret;
+}
+
+sub retrieve {
+    return $store{safe($_[0])};
 }
 
 sub products{
@@ -181,7 +200,9 @@ sub products{
         my $name=$_->{'name'};
         persist($name);
         my $newQty=$params->{safe($name)};
-        if(defined($newQty)){setStored($name,$newQty);}
+        if(defined($newQty) && $newQty=~/^\s*\d*\s*$/){
+            setStored($name,$newQty);
+        }
     }
 }
 #Routines for rendering forms
@@ -213,7 +234,7 @@ sub makeUserSelect{
     my $val = retrieve($name);
     foreach (@_){
         my $checked = ""; 
-        if($val eq $_){
+        if($val eq safe($_)){
             $checked=" selected='selected'";
         }
         $opts.="<option value='".safe($_)."'$checked>$_</option>\n";
@@ -239,7 +260,8 @@ sub makeProducts{
         my $image=$_->{'image'};
         my $qty=retrieve($name);
         my $checked = "";
-        if ($qty!="" && $qty>0){
+        if(!defined $qty){$qty=""}
+        if ($qty ne "" && $qty>0){
             $checked=" checked='true'";
         }
         $ret.= "<tr><td>$name</td><td>\$$cost</td><td><input type='checkbox' onchange='checkbox(\"".safe($name)."\")' id='check-".safe($name)."'$checked></td><td><input type='text' name='".safe($name)."' value='".encode_entities($qty)."' onchange='validate()' id='text-".safe($name)."'></td></tr>\n";
@@ -255,7 +277,7 @@ sub productValidations{
 }
 #Page builders
 sub form{ 
-    return "<form method='POST' name='store'><input id='pageField' type='hidden' name='page' value='1'>\n<table>\n".$_[0]."\n</table>\n</form>\n";
+    return "<form method='POST' action='/' name='store'><input id='pageField' type='hidden' name='page' value='1'><input id='validField' type='hidden' name='valid' value='1'>\n<table>\n".$_[0]."\n</table>\n</form>\n";
 }
 sub productPage{
     my $all = "[";
@@ -265,13 +287,13 @@ sub productPage{
     chop($all);
     $all="allCheck($all])";
 
-    return form(makeProducts(@_).makeStore())."<img src='cart.jpg' alt = 'add all to cart' style='cursor: pointer' onclick='$all'>";
+    return form(makeProducts(@_))."<img src='cart.jpg' alt = 'add all to cart' style='cursor: pointer' onclick='$all'>";
 }
 sub userPage{
-    return form(makeU($nameF).makeU($streetF).makeU($cityF).makeUserSelect($provinceF,"Alberta","British Columbia","Manitoba","New Brunswick","Newfoundland and Labrador","Nova Scotia","Ontario","Prince Edward Island","Quebec","Saskatchewan","Northwest Territories","Nunavut","Yukon").makeU($postF,"checkPost()").makeU($emailF,"checkEmail()").makeU($birthF).makeStore()."<tr><td colspan='2'><input type='button' value='Submit' onclick='submitPage(1)'></td></tr>");
+    return form(makeU($nameF).makeU($streetF).makeU($cityF).makeUserSelect($provinceF,"Alberta","British Columbia","Manitoba","New Brunswick","Newfoundland and Labrador","Nova Scotia","Ontario","Prince Edward Island","Quebec","Saskatchewan","Northwest Territories","Nunavut","Yukon Territories").makeU($postF,"checkPost()").makeU($emailF,"checkEmail()").makeU($birthF)."<tr><td colspan='2'><input type='button' value='Submit' onclick='submitPage(1)'></td></tr>");
 }
 sub checkoutPage{
-    my $ci = "<tr><th>Invoice To:</th></tr>\n";
+    my $ci = "<tr><th align=left>Invoice To:</th></tr>\n";
     $ci.="<tr><td>".retrieve($nameF)."</td></tr>";
     $ci.="<tr><td>".retrieve($streetF)."</td></tr>";
     $ci.="<tr><td>".retrieve($cityF).", ".retrieve($provinceF)."&nbsp;&nbsp;".retrieve($postF)."</td></tr>";
@@ -299,7 +321,7 @@ sub checkoutPage{
         }
     }
     $lines.="<tr><td colspan='3'><b>Total</b></td><td>\$$total</td></tr>";
-    return form("$ci</table><table id='invoice'>$lines".makeStore());
+    return form("$ci</table><table id='invoice'>$lines");
 }
 sub safe{
     my $str = shift @_;
