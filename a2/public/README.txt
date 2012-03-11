@@ -1,16 +1,16 @@
-Assignment 2 - CMPUT 410 Winter 2012
+Assignment 3 - CMPUT 410 Winter 2012
 Logan Gilmour
 
 My Application is running at http://ikno.ws
 
-Given the technology constraints, I decided to implement this application as one big perl CGI. Since the user never gets a permanent username or other permanent identification token assigned to him/her, I elected to store all application state on the client in a custom-built key-value store. 
+I modified my previous perl script for this assignment, and added php invoice page.
 
-I built the key-value store on top of hidden form elements, as cookies were not allowed in this assignment.
+Since I built a key-value store from hidden-form inputs on the last assignment, I was able to simply change the implementation of key-value store to cookie-based storage to accomodate the cookies requirement.
 
-Javascript is used for validation and submission of the form containing the key-value store when the user switches tabs. The requested tab is part of the POST request as another hidden element.
+I Added CGI validation for quantities, emails, and postal-codes as I missed them in the previous assignment. I also added a validation confirmation box that allows the user to cancel the actions they've taken on a product page.
 
-The CGI uses a small army of helper subroutines to customize the main chunk of HTML stored as a multi-line string within the CGI script (index.cgi). The server could easily store submitted information, email it, etcetera, but that was not part of the spec. Right now the server only renders HTML/Javascript and manages the datastore.
+So I wouldn't have to rewrite (in php) the code that stores arbitrary product quantities into the value store, I instead have the main index.cgi perl script submit to itself for the 'checkout' tab, then write a redirect header pointing at [base-url]/invoice.php. This allows my cookies storage logic to stay in the perl script.
 
-I'm used to much higher level tools than CGI with no cookies - as result, I found I wrote some pretty hairy spaggetti code to get things working.
+Sales tax is just a php associative array mapping to the value of the 'province' field in the store.
 
-
+The main issue I noted is that php and perl serialize cookie-names slightly differently, so care must be taken when storing from one of them and then reading from another.

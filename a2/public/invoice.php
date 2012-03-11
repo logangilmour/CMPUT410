@@ -2,7 +2,7 @@
 "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 <head>
-    <title>Assignment 1 - Checkout</title>
+    <title>Assignment 3 - Checkout</title>
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
     <LINK REL=StyleSheet HREF="style.css" TYPE="text/css" MEDIA=screen>
     <script type="text/javascript">
