@@ -3,7 +3,7 @@
 <script type="text/javascript"> 
 function ajax(){ 
 	xmlhttp=new XMLHttpRequest(); 
-	xml.onreadystatechange=function(){ 
+	xmlhttp.onreadystatechange=function(){ 
 		document.getElementById("meter-box").innerHTML=xmlhttp.responseText; 
 	}
 	var val = document.getElementById("feet-box").value;	
