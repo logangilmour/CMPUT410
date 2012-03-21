@@ -1,0 +1,18 @@
+<!ELEMENT ID ( #PCDATA ) >
+
+<!ELEMENT Name ( #PCDATA ) >
+
+<!ELEMENT catalog ( title, product+ ) >
+
+<!ELEMENT image ( #PCDATA ) >
+
+<!ELEMENT price ( #PCDATA ) >
+
+<!ELEMENT product ( ID, Name, specs, price, quantity, image ) >
+
+<!ELEMENT quantity ( #PCDATA ) >
+
+<!ELEMENT specs ( #PCDATA ) >
+
+<!ELEMENT title ( #PCDATA ) >
+
