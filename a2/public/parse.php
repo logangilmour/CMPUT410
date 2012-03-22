@@ -7,12 +7,11 @@ Assignment 4
 <BODY>
 
 <?php
-
-
+if(array_key_exists('url', $_GET)){
 $root = 'catalog';
 
 $old = new DOMDocument;
-$old->load($_GET["url"]);
+$old->load($_GET["url"]) or die("<br><br><h1>No valid xml at that location</h1>");
 
 $creator = new DOMImplementation;
 $doctype = $creator->createDocumentType($root, null, './catalog.dtd');
@@ -23,8 +22,7 @@ $oldNode = $old->getElementsByTagName($root)->item(0);
 $newNode = $new->importNode($oldNode, true);
 $new->appendChild($newNode);
 
-$new->validate();
-
+$new->validate() or die("<br><br><H1>Invalid XML.</H1>");
 
 //Initialize the XML parser
  
@@ -41,6 +39,7 @@ $title="";
 function start($parser,$element_name,$element_attrs)
  
  {
+	global $product, $products, $current, $title;
 	$current = $element_name;
 	if($current=="PRODUCT"){
 		$product=array();
@@ -52,8 +51,11 @@ function start($parser,$element_name,$element_attrs)
 function stop($parser,$element_name)
  
   {
-	if($current=="PRODUCT"){
-		$products[]=$product;
+	global $product, $products, $current, $title;
+	if($element_name=="PRODUCT"){
+		
+		
+$products[]=$product;
 	}
   }
  
@@ -62,7 +64,8 @@ function stop($parser,$element_name)
 function char($parser,$data)
  
   {
-	if($current=="title"){
+	global $product, $products, $current, $title;
+	if($current=="TITLE"){
 		$title.=$data;
 		return;
 	}
@@ -114,11 +117,23 @@ function comp($a,$b){
 }
 usort($products,'comp');
 $s = "</TD><TD>";
-echo "<TR><TH>Product$h Name$h Description$h Price$h Quantity$h Image</TH></TR>
+$h = "</TH><TH>";
+echo "<H1>$title</H1><TABLE BORDER=1><TR><TH>Product$h Name$h Description$h Price$h Quantity$h Image</TH></TR>";
+
 foreach ($products as $p){
-	echo "<TR><TD>".$p['PRODUCT'].$s.$p['NAME'].$s.$p['SPECS'].$s.
-	$p['PRICE'].$s.$p['QUANTITY'].$s.
+	echo "<TR><TD>".$p['ID'].$s.$p['NAME'].$s.$p['SPECS'].$s.
+	"$".$p['PRICE'].$s.$p['QUANTITY'].$s.
 	"<IMG SRC='".$p['IMAGE']."'></TD></TR>";
+}
+echo "</TABLE>";
+}else{
+?>
+<FORM METHOD=GET>
+<INPUT type='text' name='url'>
+<INPUT type='submit' value='Submit Query'>
+</FORM>
+
+<?
 }
 ?>
 </BODY>
