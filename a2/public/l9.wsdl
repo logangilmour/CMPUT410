@@ -1,0 +1,45 @@
+<?xml version ='1.0' encoding ='UTF-8' ?>
+
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" 
+xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+xmlns:tns="http://localhost/" 
+name="FeetConvert" targetNamespace="http://localhost/">
+  
+	<message name = 'getMetersRequest'>
+		<part name ='feet' type='xsd:float'/>
+	</message>
+	<message name ='getMetersResponse'>
+		<part name = 'result' type ='xsd:string'/>
+	</message>
+	
+	<portType name = 'FeetConvertPortType'>
+		<operation name='getMeters'>
+			<input message='getMetersRequest'/>
+			<output message='getMetersResponse'/>
+		</operation>
+	</portType>
+	
+	<binding name= 'FeetConvertBinding' type='FeetConvertPortType'>
+	  <soap:binding style='rpc' transport='http://schemas.xmlsoap.org/soap/http'/>
+		<operation name='getMeters'>
+			<soap:operation soapAction='http://localhost/lserve.php?getMeters'/>
+				<input>
+					<soap:body use='literal'/>
+				</input>
+			<output>
+				<soap:body use='literal'/>
+				</output>
+		</operation>
+	</binding>
+	
+	
+	
+	
+	<service name='FeetConvertService'>
+
+<port name='FeetConvertPort' binding='FeetConvertBinding'>
+<soap:address location='http://lserve.php'/>
+</port>
+</service>
+</definitions>

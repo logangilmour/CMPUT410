@@ -1,0 +1,77 @@
+<?php
+require_once('lib/nusoap.php');
+
+class Product{
+    public $id;
+    public $name;
+    public $price;
+
+    public function __construct($id,$name,$value){
+        $this->id=$id;
+        $this->name=$name;
+        $this->value=$value;
+    }
+}
+
+
+$products = array(1=>new Product(1,'ham',12.99),2=>new Product(2,'cheese',6.99),3=>new Product(3,'pickles',5.99),4=>new Product(4,'chicken soup',2.99),5=>new Product(5,'missile',567349.90));
+// Create the server instance
+$server = new soap_server();
+// Initialize WSDL support
+$namespace="http://ikno.ws/wsdl";
+
+$server->configureWSDL('mywsdl',$namespace);
+$server->wsdl->schemaTargetNamespace = $namespace;
+
+
+$server->wsdl->addComplexType(
+    'Product',
+    'complexType',
+    'struct',
+    'all',
+    '',
+    array(
+        'Id'=>array(
+            'name'=>'Id',
+            'type'=>'xsd:integer'),
+        'Name'=>array(
+            'name'=>'Name',
+            'type'=>'xsd:string'),
+        'Price'=>array(
+            'name'=>'Price',
+            'type'=>'xsd:double')
+
+        )
+    );
+$server->wsdl->addComplexType(
+    'Products',
+    'complexType',
+    'array',
+    '',
+    'SOAP-ENC:Array',
+    array(),
+    array(
+        array('ref'=>'SOAP-ENC:arrayType',
+            'wsdl:arrayType' => 'tns:Products[]')
+        ),
+        'tns:Product'
+    );
+
+// Register the method to expose
+$server->register('Price',                // method name
+    array('id'=>'xsd:integer','qty'=>'xsd:integer'),        // input parameters
+    array('return' => 'xsd:double'),      // output parameters
+    $namespace,                      // namespace
+    $namespace.'#Price',                // soapaction
+    'rpc',                                // style
+    'encoded',                            // use
+    'Gets the price of a specific product'            // documentation
+);
+// Define the method as a PHP function
+function Price($id,$qty) {
+        return $products[$id]['price']*$qty;
+}
+// Use the request to (try to) invoke the service
+$HTTP_RAW_POST_DATA = isset($HTTP_RAW_POST_DATA) ? $HTTP_RAW_POST_DATA : '';
+$server->service($HTTP_RAW_POST_DATA);
+?>
