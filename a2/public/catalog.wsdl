@@ -56,7 +56,7 @@
 </binding>
 <service name="mywsdl">
   <port name="mywsdlPort" binding="tns:mywsdlBinding">
-    <soap:address location="http://localhost/lserve.php"/>
+    <soap:address location="http://ikno.ws/lserve.php"/>
   </port>
 </service>
 </definitions>
