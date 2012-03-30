@@ -40,7 +40,7 @@ class Product{
     }
 }
 
-$client = new nusoap_client('http://localhost/lserve.php?wsdl', true);
+$client = new nusoap_client('http://ikno.ws/lserve.php?wsdl', true);
 
 $id = $_GET['id'];
 $qty = $_GET['qty'];

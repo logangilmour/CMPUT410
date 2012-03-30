@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<definitions xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://ikno.ws/wsdl" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns="http://schemas.xmlsoap.org/wsdl/" targetNamespace="http://ikno.ws/wsdl">
+<types>
+<xsd:schema targetNamespace="http://ikno.ws/wsdl"
+>
+ <xsd:import namespace="http://schemas.xmlsoap.org/soap/encoding/" />
+ <xsd:import namespace="http://schemas.xmlsoap.org/wsdl/" />
+ <xsd:complexType name="Product">
+  <xsd:all>
+   <xsd:element name="id" type="xsd:integer"/>
+   <xsd:element name="pname" type="xsd:string"/>
+   <xsd:element name="price" type="xsd:double"/>
+  </xsd:all>
+ </xsd:complexType>
+ <xsd:complexType name="Products">
+  <xsd:complexContent>
+   <xsd:restriction base="SOAP-ENC:Array">
+    <xsd:attribute ref="SOAP-ENC:arrayType" wsdl:arrayType="tns:Products[]"/>
+   </xsd:restriction>
+  </xsd:complexContent>
+ </xsd:complexType>
+</xsd:schema>
+</types>
+<message name="CatalogRequest"></message>
+<message name="CatalogResponse">
+  <part name="return" type="tns:Products" /></message>
+<message name="PriceRequest">
+  <part name="id" type="xsd:integer" />
+  <part name="qty" type="xsd:integer" /></message>
+<message name="PriceResponse">
+  <part name="return" type="xsd:double" /></message>
+<portType name="mywsdlPortType">
+  <operation name="Catalog">
+    <documentation>Gets the catalog of products</documentation>
+    <input message="tns:CatalogRequest"/>
+    <output message="tns:CatalogResponse"/>
+  </operation>
+  <operation name="Price">
+    <documentation>Gets the price of a specific product</documentation>
+    <input message="tns:PriceRequest"/>
+    <output message="tns:PriceResponse"/>
+  </operation>
+</portType>
+<binding name="mywsdlBinding" type="tns:mywsdlPortType">
+  <soap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
+  <operation name="Catalog">
+    <soap:operation soapAction="http://ikno.ws/wsdl#Catalog" style="rpc"/>
+    <input><soap:body use="encoded" namespace="http://ikno.ws/wsdl" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/></input>
+    <output><soap:body use="encoded" namespace="http://ikno.ws/wsdl" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/></output>
+  </operation>
+  <operation name="Price">
+    <soap:operation soapAction="http://ikno.ws/wsdl#Price" style="rpc"/>
+    <input><soap:body use="encoded" namespace="http://ikno.ws/wsdl" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/></input>
+    <output><soap:body use="encoded" namespace="http://ikno.ws/wsdl" encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"/></output>
+  </operation>
+</binding>
+<service name="mywsdl">
+  <port name="mywsdlPort" binding="tns:mywsdlBinding">
+    <soap:address location="http://localhost/lserve.php"/>
+  </port>
+</service>
+</definitions>
