@@ -1,12 +1,11 @@
-Assignment 4 - CMPUT 410 Winter 2012
 Logan Gilmour
 
-My application is running at http://ikno.ws
+1174141
 
-I implemented this assignment in php. I did the actual parsing and rendering
-using expat, then realized that it didn't support validation (which I wanted
-to use to make sure the given xml is good). To validate againts the DTD
-contained here, I loaded the xml with DOMDocument and then injected the DTD
-before validating (as we assume the DTD won't be specified with the given
-XML.)
+My application is running at http://ikno.ws - its source is index.php.
 
+My SOAP server is running at http://ikno.ws/lserve.php - its source is lserve.php.
+
+My web-service is described by catalog.wsdl
+
+I implemented this application in php using nusoap.

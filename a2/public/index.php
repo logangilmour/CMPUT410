@@ -1,141 +1,70 @@
-<HTML>
-<HEAD>
-<TITLE>
-Assignment 4
-</TITLE>
-</HEAD>
-<BODY>
+<html>
+<head>
+<title>Assignment 5</title>
+</head>
+<body>
 
 <?php
-if(array_key_exists('url', $_GET)){
-$root = 'catalog';
 
-$old = new DOMDocument;
-$old->load($_GET["url"]) or die("<br><br><h1>No valid xml at that location</h1>");
 
-$creator = new DOMImplementation;
-$doctype = $creator->createDocumentType($root, null, './catalog.dtd');
-$new = $creator->createDocument(null, null, $doctype);
-$new->encoding = "utf-8";
 
-$oldNode = $old->getElementsByTagName($root)->item(0);
-$newNode = $new->importNode($oldNode, true);
-$new->appendChild($newNode);
+require_once('lib/nusoap.php');
 
-$new->validate() or die("<br><br><H1>Invalid XML.</H1>");
 
-//Initialize the XML parser
- 
-$parser=xml_parser_create();
- 
-/*Function to use at the start of an element*/
+class Product{
+    public $id;
+    public $pname;
+    public $price;
 
-$products = array();
+    public function __construct($id,$pname,$price){
+        $this->id=$id;
+        $this->pname=$pname;
+        $this->price=$price;
+    }
 
-$product=NULL;
-$current=NULL;
-$title="";
+    public function toArr(){
+        return array('id'=>$id,'pname'=>$pname,'price'=>$price);
+    }
 
-function start($parser,$element_name,$element_attrs)
- 
- {
-	global $product, $products, $current, $title;
-	$current = $element_name;
-	if($current=="PRODUCT"){
-		$product=array();
-	} 
- }
- 
-//Function to use at the end of an element
- 
-function stop($parser,$element_name)
- 
-  {
-	global $product, $products, $current, $title;
-	if($element_name=="PRODUCT"){
-		
-		
-$products[]=$product;
-	}
-  }
- 
-//Function to use when finding character data
- 
-function char($parser,$data)
- 
-  {
-	global $product, $products, $current, $title;
-	if($current=="TITLE"){
-		$title.=$data;
-		return;
-	}
-	$product[$current].=$data;
-  }
- 
-//Specify element handler
- 
-xml_set_element_handler($parser,"start","stop");
- 
-//Specify data handler
- 
-xml_set_character_data_handler($parser,"char");
- 
-//Open XML file
- 
-$fp=fopen($_GET["url"],"r");
- 
-//Read data
- 
-while ($data=fread($fp,4096))
- 
-  {
- 
-    xml_parse($parser,$data,feof($fp)) or
- 
-    die (sprintf("XML Error: %s at line %d",
- 
-    xml_error_string(xml_get_error_code($parser)),
- 
-    xml_get_current_line_number($parser)));
- 
-  }
- 
-//Free the XML parser
- 
-xml_parser_free($parser);
+    public static function fromArr($arr){
+        return new self($arr['id'],$arr['pname'],$arr['price']);
+    }
 
-function comp($a,$b){
-	if($a['NAME']==$b['NAME']){
-		$av = $a['QUANTITY']*$a['VALUE'];
-		$bv = $b['QUANTITY']*$b['VALUE'];
-		if($ab==$bv){
-			return 0;
-		}
-		return $ab>bv?1:-1;
-	}
-	return $a['NAME']>$b['NAME']?1:-1;
+    public function render(){
+        return '<tr><td>'.$this->id.'</td><td>'.$this->pname.
+        '</td><td>'.$this->price.
+        '</td><td><form method="GET"><input type="text" name="qty">'.
+        '<input type="hidden" name="id" value="'.$this->id.'">'.
+        '<input type="hidden" name="name" value="'.$this->pname.'">'.
+        '<input type="submit" value="calculate price"></form>';
+    }
 }
-usort($products,'comp');
-$s = "</TD><TD>";
-$h = "</TH><TH>";
-echo "<H1>$title</H1><TABLE BORDER=1><TR><TH>Product$h Name$h Description$h Price$h Quantity$h Image</TH></TR>";
 
-foreach ($products as $p){
-	echo "<TR><TD>".$p['ID'].$s.$p['NAME'].$s.$p['SPECS'].$s.
-	"$".$p['PRICE'].$s.$p['QUANTITY'].$s.
-	"<IMG SRC='".$p['IMAGE']."'></TD></TR>";
-}
-echo "</TABLE>";
-}else{
+$client = new nusoap_client('http://ikno.ws/lserve.php?wsdl', true);
+
+$id = $_GET['id'];
+$qty = $_GET['qty'];
+$name = $_GET['name'];
+if($id==NULL){
 ?>
-<FORM METHOD=GET>
-Enter XML file URL:
-<INPUT type='text' name='url'>
-<INPUT type='submit' value='Submit Query'>
-</FORM>
-
+<table border=1>
+<tr><th>Id</th><th>Name</th><th>Price</th><th>Bulk Price Calculator</th></tr>
 <?
+
+$result2 = $client->call('Catalog',array());
+foreach($result2 as $prod){
+    $product = Product::fromArr($prod);
+    echo $product->render();
 }
 ?>
-</BODY>
-</HTML>
+</table>
+</html>
+<?
+}else{
+if(!is_numeric($qty)){
+    echo "'$qty' is not a valid quantity.";
+}else{
+$total = $client->call('Price', array('id' => $id,'qty'=>$qty));
+echo "Price of $qty ".$name."s is \$".$total;
+}
+?><br><a href='/index.php'>Back</a></html><?}?>
