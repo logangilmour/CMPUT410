@@ -7,7 +7,7 @@ function ajax(){
 		document.getElementById("meter-box").innerHTML=xmlhttp.responseText; 
 	}
 	var val = document.getElementById("feet-box").value;	
-	xmlhttp.open("GET","lab9.php?q="+val,true);
+	xmlhttp.open("GET","ajaxclient.php?q="+val,true);
 	xmlhttp.send();
 } 
 </script>
