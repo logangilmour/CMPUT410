@@ -8,4 +8,4 @@ my wsdl is defined by convert.wsdl, the html is in index.php, and the
 ajax client that hooks into the webservice is in ajaxclient.php.
 
 
-The app is up at [http://ikno.ws/lab9/].
+The app is up at http://ikno.ws/lab9/.
